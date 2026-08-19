@@ -65,10 +65,19 @@ export async function POST(request: Request) {
   const tipo = String(body.tipo ?? "").toLowerCase();
 
   if (!Number.isFinite(monto) || monto <= 0) {
-    return NextResponse.json({ error: "monto tiene que ser un número mayor a 0." }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "monto tiene que ser un número mayor a 0.",
+        recibido: { monto: body.monto, tipoDeDato: typeof body.monto },
+      },
+      { status: 400 }
+    );
   }
   if (tipo !== "ingreso" && tipo !== "gasto") {
-    return NextResponse.json({ error: "tipo tiene que ser 'ingreso' o 'gasto'." }, { status: 400 });
+    return NextResponse.json(
+      { error: "tipo tiene que ser 'ingreso' o 'gasto'.", recibido: { tipo: body.tipo } },
+      { status: 400 }
+    );
   }
 
   const supabase = createAdminClient();
