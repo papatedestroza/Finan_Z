@@ -9,19 +9,36 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * (SUPABASE_USER_ID), vía service role.
  */
 
-function tokenValido(header: string | null): boolean {
+function tokensCoinciden(recibido: string): boolean {
   const esperado = process.env.MOVIMIENTOS_API_TOKEN;
-  if (!esperado || !header?.startsWith("Bearer ")) return false;
+  if (!esperado) return false;
 
-  const recibido = header.slice("Bearer ".length);
   const a = Buffer.from(recibido);
   const b = Buffer.from(esperado);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
 
+/**
+ * Acepta el token por header ("Authorization: Bearer ...") o por query
+ * string ("?token=..."), para poder pegar una sola URL en Shortcuts sin
+ * tener que tipear un header a mano (fuente típica de typos/autocorrección
+ * en el teclado de iOS).
+ */
+function tokenValido(request: Request): boolean {
+  const header = request.headers.get("authorization");
+  if (header?.startsWith("Bearer ")) {
+    return tokensCoinciden(header.slice("Bearer ".length));
+  }
+
+  const queryToken = new URL(request.url).searchParams.get("token");
+  if (queryToken) return tokensCoinciden(queryToken);
+
+  return false;
+}
+
 export async function POST(request: Request) {
-  if (!tokenValido(request.headers.get("authorization"))) {
+  if (!tokenValido(request)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
